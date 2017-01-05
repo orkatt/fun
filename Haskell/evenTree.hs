@@ -1,69 +1,79 @@
 -- inspired by http://avva.livejournal.com/2994023.html
 -- description https://www.hackerrank.com/challenges/even-tree
 
-module EvenTree where
+module Tree where
 
-data Tree n = Nil | Leaf n | Tree n [Tree n] | Fail
+data Tree n = Nil | Leaf n | Tree n [Tree n]
       deriving (Show)
-
+      
     
-link :: Tree String -> String -> String -> Tree String
+add :: Eq n => Tree n -> n -> n -> Tree n
 
-link Nil s t = 
-    Tree s [(Leaf t)]
+add Nil s t = Tree s [(Leaf t)]
 
-link (Leaf n) s t
+add (Leaf n) s t
     | n == s        = Tree n [(Leaf t)]
     | otherwise     = Leaf n
 
-link (Tree n cs) s t 
+add (Tree n cs) s t 
     | n == s        = Tree n (cs ++ [Leaf t])
     | otherwise     = Tree n (map f cs)
-        where f x = link x s t
+        where f x = add x s t
+
+        
+count :: Tree n -> Int
+ 
+count Nil         = 0
+count (Leaf _)    = 1
+count (Tree _ cs) = 1 + sum (map count cs)
+
+
+removableLinkCount :: Tree n -> Int
+
+removableLinkCount Nil         = 0    
+
+removableLinkCount (Leaf _)    = 0
+
+removableLinkCount (Tree _ cs) = 
+    sum (map f cs) + sum (map removableLinkCount cs)
+    where f x = if even(count(x)) then 1 else 0
 
 
  
---
-class Countable t where
-   count :: t -> Int
+----
 
- 
-instance Countable (Tree n) where 
-   count Nil         = 0
-   count (Leaf _)    = 1
-   count (Tree _ cs) = 1 + sum (map count cs)
+parseLine :: (String -> n) -> String -> (n,n)
+parseLine f s = do
+    let l = map f (words s)
+    tuplify2 l
+    where tuplify2 (x:y:_) = (x,y)
 
 
-removableEdges :: Tree String -> Int
-removableEdges Nil         = 0    
-removableEdges (Leaf _)    = 0
-removableEdges (Tree _ cs) = sum (map f cs) + sum (map removableEdges cs)
-                             where f x = if even(count(x)) then 1 else 0
+parseTree :: Eq n => (String -> n) -> Tree n -> [String] -> Tree n
+parseTree f t (x:xs) = do
+    let l = parseLine f x
+    let tn = add t (snd l) (fst l)
+    if (length xs) > 0 
+    then parseTree f tn xs
+    else tn
 
 
-readN :: Int -> Tree String -> IO (Tree String)
+----   
 
-readN n t = 
-   if n /= 0 
-   then   
-      do l <- getLine
-         if l /= ""
-         then readN (n-1) (join t (words l))
-         else return t
-   else return t
-   where join x (n1:n2:_) = link x n2 n1
+readLines :: Int -> IO [String]
+readLines n 
+    | n <= 0    = return []
+    | otherwise = do 
+         x <- getLine
+         xs <- readLines (n-1)
+         return (x:xs)
 
 
-
-
-
---   
 main = 
   do fl <- getLine
      let n = read (last (words fl)) :: Int
-     --putStrLn (show n)
-     t <- readN n Nil
-     --putStrLn (show t)
-     putStrLn (show (removableEdges(t)))     
+     lines <- readLines n
+     let t = parseTree id Nil lines
+     putStrLn (show (removableLinkCount(t)))     
 
 
